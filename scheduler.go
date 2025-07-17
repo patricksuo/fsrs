@@ -9,40 +9,114 @@ import (
 )
 
 type Scheduler struct {
-	// Parameters are the model weights of the FSRS scheduler.
-	Parameters []float64
-	// DesiredRetention is the desired retention rate of cards scheduled with the scheduler.
-	DesiredRetention float64
-	// LearningSteps are small time intervals that schedule cards in the Learning state.
-	LearningSteps []time.Duration
-	// RelearningSteps are small time intervals that schedule cards in the Relearning state.
-	RelearningSteps []time.Duration
-	// MaximumInterval is the maximum number of days a Review-state card can be scheduled into the future.
-	MaximumInterval int
-	// EnableFuzzing determines whether to apply a small amount of random 'fuzz' to calculated intervals.
-	EnableFuzzing bool
-	// Internal fields
-	decay  float64
+	// parameters are the model weights of the FSRS scheduler.
+	parameters []float64
+
+	// desiredRetention is the desired retention rate of cards scheduled with the scheduler.
+	desiredRetention float64
+
+	// learningSteps are small time intervals that schedule cards in the Learning state.
+	learningSteps []time.Duration
+
+	// relearningSteps are small time intervals that schedule cards in the Relearning state.
+	relearningSteps []time.Duration
+
+	// maximumInterval is the maximum number of days a Review-state card can be scheduled into the future.
+	maximumInterval int
+
+	// enableFuzzing determines whether to apply a small amount of random 'fuzz' to calculated intervals.
+	enableFuzzing bool
+
+	decay float64
+
 	factor float64
 }
 
-func DefaultScheduler() *Scheduler {
+// SchedulerOption defines the type for configuration functions
+type SchedulerOption func(*Scheduler)
+
+// NewScheduler creates a new Scheduler instance with default values and applies optional parameters
+func NewScheduler(options ...SchedulerOption) *Scheduler {
+	// Set reasonable default values
 	var params = DefaultParameters
 	var decay = -params[20]
 
-	if err := validateParameters(params); err != nil {
+	s := &Scheduler{
+		parameters:       params,
+		desiredRetention: 0.9,
+		learningSteps:    []time.Duration{1 * time.Minute, 10 * time.Minute},
+		relearningSteps:  []time.Duration{10 * time.Minute},
+		maximumInterval:  36500,
+		enableFuzzing:    true,
+		decay:            decay,
+		factor:           math.Pow(0.9, 1.0/decay) - 1,
+	}
+
+	// Apply all optional parameters
+	for _, option := range options {
+		option(s)
+	}
+
+	if err := validateParameters(s.parameters); err != nil {
 		panic(err)
 	}
 
-	return &Scheduler{
-		Parameters:       params,
-		DesiredRetention: 0.9,
-		LearningSteps:    []time.Duration{1 * time.Minute, 10 * time.Minute},
-		RelearningSteps:  []time.Duration{10 * time.Minute},
-		MaximumInterval:  36500,
-		EnableFuzzing:    true,
-		decay:            decay,
-		factor:           math.Pow(0.9, 1.0/decay) - 1,
+	return s
+}
+
+// WithParameters sets the FSRS model weight parameters
+func WithParameters(params []float64) SchedulerOption {
+	return func(s *Scheduler) {
+		s.parameters = params
+	}
+}
+
+// WithDesiredRetention sets the desired retention rate
+func WithDesiredRetention(retention float64) SchedulerOption {
+	return func(s *Scheduler) {
+		s.desiredRetention = retention
+	}
+}
+
+// WithLearningSteps sets the time intervals for cards in the Learning state
+func WithLearningSteps(steps []time.Duration) SchedulerOption {
+	return func(s *Scheduler) {
+		s.learningSteps = steps
+	}
+}
+
+// WithRelearningSteps sets the time intervals for cards in the Relearning state
+func WithRelearningSteps(steps []time.Duration) SchedulerOption {
+	return func(s *Scheduler) {
+		s.relearningSteps = steps
+	}
+}
+
+// WithMaximumInterval sets the maximum number of days for Review-state card scheduling
+func WithMaximumInterval(days int) SchedulerOption {
+	return func(s *Scheduler) {
+		s.maximumInterval = days
+	}
+}
+
+// WithEnableFuzzing determines whether to apply random fuzz to calculated intervals
+func WithEnableFuzzing(enable bool) SchedulerOption {
+	return func(s *Scheduler) {
+		s.enableFuzzing = enable
+	}
+}
+
+// WithDecay sets the decay parameter
+func WithDecay(decay float64) SchedulerOption {
+	return func(s *Scheduler) {
+		s.decay = decay
+	}
+}
+
+// WithFactor sets the factor parameter
+func WithFactor(factor float64) SchedulerOption {
+	return func(s *Scheduler) {
+		s.factor = factor
 	}
 }
 
@@ -100,9 +174,9 @@ func (s *Scheduler) ReviewCard(card *Card, rating Rating, reviewDatetime time.Ti
 
 	switch card.State {
 	case Learning, Relearning:
-		steps := s.LearningSteps
+		steps := s.learningSteps
 		if card.State == Relearning {
-			steps = s.RelearningSteps
+			steps = s.relearningSteps
 		}
 
 		// update the card's stability and difficulty
@@ -174,7 +248,7 @@ func (s *Scheduler) ReviewCard(card *Card, rating Rating, reviewDatetime time.Ti
 		// Calculate next interval
 		switch rating {
 		case Again:
-			if len(s.RelearningSteps) == 0 {
+			if len(s.relearningSteps) == 0 {
 				// Stay in Review state
 				nextIntervalDays := s.nextInterval(card.Stability)
 				nextInterval = time.Duration(nextIntervalDays) * 24 * time.Hour
@@ -182,7 +256,7 @@ func (s *Scheduler) ReviewCard(card *Card, rating Rating, reviewDatetime time.Ti
 				// Enter Relearning state
 				card.State = Relearning
 				card.Step = 0
-				nextInterval = s.RelearningSteps[card.Step]
+				nextInterval = s.relearningSteps[card.Step]
 			}
 		default: // Hard, Good, Easy
 			nextIntervalDays := s.nextInterval(card.Stability)
@@ -193,7 +267,7 @@ func (s *Scheduler) ReviewCard(card *Card, rating Rating, reviewDatetime time.Ti
 		panic(fmt.Sprintf("unknown state %v card id %v", card.ID, card.State))
 	}
 
-	if s.EnableFuzzing && card.State == Review {
+	if s.enableFuzzing && card.State == Review {
 		nextInterval = s.getFuzzedInterval(nextInterval)
 	}
 
@@ -214,13 +288,13 @@ func (s *Scheduler) clampStability(stability float64) float64 {
 }
 
 func (s *Scheduler) initialStability(rating Rating) float64 {
-	return s.clampStability(s.Parameters[rating-1])
+	return s.clampStability(s.parameters[rating-1])
 }
 
 func (s *Scheduler) initialDifficulty(rating Rating) float64 {
 	var (
-		p4 = s.Parameters[4]
-		p5 = s.Parameters[5]
+		p4 = s.parameters[4]
+		p5 = s.parameters[5]
 	)
 
 	difficulty := p4 - math.Pow(math.E, p5*(float64(rating)-1)) + 1
@@ -232,19 +306,19 @@ func (s *Scheduler) nextInterval(stability float64) (days int) {
 	decay := s.decay
 	factor := s.factor
 
-	nextInterval := (stability / factor) * (math.Pow(s.DesiredRetention, 1/decay) - 1)
+	nextInterval := (stability / factor) * (math.Pow(s.desiredRetention, 1/decay) - 1)
 	days = int(math.Round(nextInterval))
 
 	// Ensure interval is at least 1 and not more than the maximum interval
 	days = max(1, days)
-	days = min(days, s.MaximumInterval)
+	days = min(days, s.maximumInterval)
 	return days
 }
 
 func (s *Scheduler) shortTermStability(stability float64, rating Rating) float64 {
-	p17 := s.Parameters[17]
-	p18 := s.Parameters[18]
-	p19 := s.Parameters[19]
+	p17 := s.parameters[17]
+	p18 := s.parameters[18]
+	p19 := s.parameters[19]
 
 	shortTermStabilityIncrease := math.Pow(math.E, p17*(float64(rating)-3+p18)) * math.Pow(stability, -p19)
 
@@ -256,8 +330,8 @@ func (s *Scheduler) shortTermStability(stability float64, rating Rating) float64
 }
 
 func (s *Scheduler) nextDifficulty(difficulty float64, rating Rating) float64 {
-	p6 := s.Parameters[6]
-	p7 := s.Parameters[7]
+	p6 := s.parameters[6]
+	p7 := s.parameters[7]
 
 	linearDamping := func(deltaDifficulty, difficulty float64) float64 {
 		return (10.0 - difficulty) * deltaDifficulty / 9.0
@@ -288,12 +362,12 @@ func (s *Scheduler) nextStability(difficulty, stability, retrievability float64,
 }
 
 func (s *Scheduler) nextForgetStability(difficulty, stability, retrievability float64) float64 {
-	p11 := s.Parameters[11]
-	p12 := s.Parameters[12]
-	p13 := s.Parameters[13]
-	p14 := s.Parameters[14]
-	p17 := s.Parameters[17]
-	p18 := s.Parameters[18]
+	p11 := s.parameters[11]
+	p12 := s.parameters[12]
+	p13 := s.parameters[13]
+	p14 := s.parameters[14]
+	p17 := s.parameters[17]
+	p18 := s.parameters[18]
 
 	longTermParams := p11 *
 		math.Pow(difficulty, -p12) *
@@ -306,11 +380,11 @@ func (s *Scheduler) nextForgetStability(difficulty, stability, retrievability fl
 }
 
 func (s *Scheduler) nextRecallStability(difficulty, stability, retrievability float64, rating Rating) float64 {
-	p8 := s.Parameters[8]
-	p9 := s.Parameters[9]
-	p10 := s.Parameters[10]
-	p15 := s.Parameters[15]
-	p16 := s.Parameters[16]
+	p8 := s.parameters[8]
+	p9 := s.parameters[9]
+	p10 := s.parameters[10]
+	p15 := s.parameters[15]
+	p16 := s.parameters[16]
 
 	hardPenalty := 1.0
 	if rating == Hard {
@@ -349,7 +423,7 @@ func (s *Scheduler) getFuzzedInterval(interval time.Duration) time.Duration {
 		maxIvl := int(math.Round(days + delta))
 
 		minIvl = max(2, minIvl)
-		maxIvl = min(maxIvl, s.MaximumInterval)
+		maxIvl = min(maxIvl, s.maximumInterval)
 		minIvl = min(minIvl, maxIvl)
 
 		return minIvl, maxIvl
@@ -362,7 +436,7 @@ func (s *Scheduler) getFuzzedInterval(interval time.Duration) time.Duration {
 
 	fuzzedDays := float64(minIvl) + rand.Float64()*(float64(maxIvl-minIvl+1))
 	fuzzedDays = math.Round(fuzzedDays)
-	fuzzedDaysClamped := min(fuzzedDays, float64(s.MaximumInterval))
+	fuzzedDaysClamped := min(fuzzedDays, float64(s.maximumInterval))
 
 	return time.Duration(fuzzedDaysClamped) * 24 * time.Hour
 }

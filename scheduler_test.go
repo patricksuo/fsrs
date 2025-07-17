@@ -9,8 +9,7 @@ import (
 )
 
 func TestReviewCard(t *testing.T) {
-	scheduler := DefaultScheduler()
-	scheduler.EnableFuzzing = false
+	scheduler := NewScheduler(WithEnableFuzzing(false))
 
 	ratingList := []Rating{Good,
 		Good,
@@ -58,9 +57,6 @@ func TestReviewCard(t *testing.T) {
 }
 
 func TestRepeatedCorrectReviews(t *testing.T) {
-	scheduler := DefaultScheduler()
-	scheduler.EnableFuzzing = false
-
 	card := NewEmptyCard(1)
 	card.LastReview = &card.Due
 
@@ -68,7 +64,7 @@ func TestRepeatedCorrectReviews(t *testing.T) {
 }
 
 func TestRetrievability(t *testing.T) {
-	scheduler := DefaultScheduler()
+	scheduler := NewScheduler()
 	card := NewEmptyCard(1)
 
 	// Retrievability of New card
@@ -99,7 +95,7 @@ func TestRetrievability(t *testing.T) {
 }
 
 func TestGoodLearningSteps(t *testing.T) {
-	scheduler := DefaultScheduler()
+	scheduler := NewScheduler()
 	createdAt := time.Now().UTC()
 	card := NewEmptyCard(1)
 
@@ -125,7 +121,7 @@ func TestGoodLearningSteps(t *testing.T) {
 }
 
 func TestAgainLearningSteps(t *testing.T) {
-	scheduler := DefaultScheduler()
+	scheduler := NewScheduler()
 	createdAt := time.Now().UTC()
 	card := NewEmptyCard(1)
 
@@ -143,7 +139,7 @@ func TestAgainLearningSteps(t *testing.T) {
 }
 
 func TestHardLearningSteps(t *testing.T) {
-	scheduler := DefaultScheduler()
+	scheduler := NewScheduler()
 	createdAt := time.Now().UTC()
 	card := NewEmptyCard(1)
 
@@ -161,7 +157,7 @@ func TestHardLearningSteps(t *testing.T) {
 }
 
 func TestEasyLearningSteps(t *testing.T) {
-	scheduler := DefaultScheduler()
+	scheduler := NewScheduler()
 	createdAt := time.Now().UTC()
 	card := NewEmptyCard(1)
 
@@ -179,8 +175,7 @@ func TestEasyLearningSteps(t *testing.T) {
 }
 
 func TestReviewState(t *testing.T) {
-	scheduler := DefaultScheduler()
-	scheduler.EnableFuzzing = false
+	scheduler := NewScheduler(WithEnableFuzzing(false))
 	card := NewEmptyCard(1)
 
 	// First review with Good rating
@@ -214,8 +209,8 @@ func TestReviewState(t *testing.T) {
 }
 
 func TestRelearning(t *testing.T) {
-	scheduler := DefaultScheduler()
-	scheduler.EnableFuzzing = false
+	scheduler := NewScheduler(WithEnableFuzzing(false))
+
 	card := NewEmptyCard(1)
 
 	// First review with Good rating
