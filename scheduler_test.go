@@ -34,7 +34,7 @@ func TestReviewCard(t *testing.T) {
 	reivewDatetime := time.Date(2022, 11, 29, 12, 30, 0, 0, time.UTC)
 
 	for _, r := range ratingList {
-		card, _ = scheduler.ReviewCard(card, r, reivewDatetime, 0)
+		card = scheduler.ReviewCard(card, r, reivewDatetime)
 
 		ivl := int((math.Round(card.Due.Sub(*card.LastReview).Hours() / 24)))
 		ivlHistory = append(ivlHistory, ivl)
@@ -77,21 +77,21 @@ func TestRetrievability(t *testing.T) {
 	assert.Equal(t, float64(0), retrievability)
 
 	// Retrievability of Learning card
-	card, _ = scheduler.ReviewCard(card, Good, time.Now().UTC(), 0)
+	card = scheduler.ReviewCard(card, Good, time.Now().UTC())
 	assert.Equal(t, Learning, card.State)
 	retrievability = scheduler.GetCardRetrievability(card, time.Now().UTC())
 	assert.GreaterOrEqual(t, retrievability, float64(0))
 	assert.LessOrEqual(t, retrievability, float64(1))
 
 	// Retrievability of Review card
-	card, _ = scheduler.ReviewCard(card, Good, time.Now().UTC(), 0)
+	card = scheduler.ReviewCard(card, Good, time.Now().UTC())
 	assert.Equal(t, Review, card.State)
 	retrievability = scheduler.GetCardRetrievability(card, time.Now().UTC())
 	assert.GreaterOrEqual(t, retrievability, float64(0))
 	assert.LessOrEqual(t, retrievability, float64(1))
 
 	// Retrievability of Relearning card
-	card, _ = scheduler.ReviewCard(card, Again, time.Now().UTC(), 0)
+	card = scheduler.ReviewCard(card, Again, time.Now().UTC())
 	assert.Equal(t, Relearning, card.State)
 	retrievability = scheduler.GetCardRetrievability(card, time.Now().UTC())
 	assert.GreaterOrEqual(t, retrievability, float64(0))
@@ -109,7 +109,7 @@ func TestGoodLearningSteps(t *testing.T) {
 
 	// First review with Good rating
 	rating := Good
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 	assert.Equal(t, Learning, card.State)
 	assert.Equal(t, 1, card.Step)
 	// card is due in approx. 10 minutes (600 seconds)
@@ -117,7 +117,7 @@ func TestGoodLearningSteps(t *testing.T) {
 
 	// Second review with Good rating
 	rating = Good
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 	assert.Equal(t, Review, card.State)
 	assert.Equal(t, -1, card.Step)
 	// card is due in over a day
@@ -135,7 +135,7 @@ func TestAgainLearningSteps(t *testing.T) {
 
 	// review with Again rating
 	rating := Again
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 	assert.Equal(t, Learning, card.State)
 	assert.Equal(t, 0, card.Step)
 	// card is due in approx. 1 minute (60 seconds)
@@ -153,7 +153,7 @@ func TestHardLearningSteps(t *testing.T) {
 
 	// review with Again rating
 	rating := Hard
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 	assert.Equal(t, Learning, card.State)
 	assert.Equal(t, 0, card.Step)
 	// card is due in approx. 5.5 minutes (330 seconds)
@@ -171,7 +171,7 @@ func TestEasyLearningSteps(t *testing.T) {
 
 	// review with Again rating
 	rating := Easy
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 	assert.Equal(t, Review, card.State)
 	assert.Equal(t, -1, card.Step)
 	// card is due in at least 1 full day
@@ -185,11 +185,11 @@ func TestReviewState(t *testing.T) {
 
 	// First review with Good rating
 	rating := Good
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 
 	// Second review with Good rating
 	rating = Good
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 
 	assert.Equal(t, Review, card.State)
 	assert.Equal(t, -1, card.Step)
@@ -197,7 +197,7 @@ func TestReviewState(t *testing.T) {
 	// Third review with Good rating
 	prevDue := card.Due
 	rating = Good
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 
 	assert.Equal(t, Review, card.State)
 	assert.GreaterOrEqual(t, int(math.Round(card.Due.Sub(prevDue).Hours())), 24)
@@ -205,7 +205,7 @@ func TestReviewState(t *testing.T) {
 	// Fourth review with Again rating
 	prevDue = card.Due
 	rating = Again
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 
 	t.Logf("\nWTF %v %v %v\n", prevDue, card.Due, math.Round(card.Due.Sub(prevDue).Minutes()))
 	assert.Equal(t, Relearning, card.State)
@@ -220,21 +220,21 @@ func TestRelearning(t *testing.T) {
 
 	// First review with Good rating
 	rating := Good
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 
 	// Second review with Good rating
 	rating = Good
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 
 	// Third review with Good rating
 	prevDue := card.Due
 	rating = Good
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 
 	// Fourth review with Again rating
 	prevDue = card.Due
 	rating = Again
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 
 	assert.Equal(t, Relearning, card.State)
 	assert.Equal(t, 0, card.Step)
@@ -243,7 +243,7 @@ func TestRelearning(t *testing.T) {
 	// Fifth review with Again rating
 	prevDue = card.Due
 	rating = Again
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 
 	assert.Equal(t, Relearning, card.State)
 	assert.Equal(t, 0, card.Step)
@@ -252,7 +252,7 @@ func TestRelearning(t *testing.T) {
 	// Sixth review with Good rating
 	prevDue = card.Due
 	rating = Good
-	card, _ = scheduler.ReviewCard(card, rating, card.Due, 0)
+	card = scheduler.ReviewCard(card, rating, card.Due)
 
 	assert.Equal(t, Review, card.State)
 	assert.Equal(t, -1, card.Step)

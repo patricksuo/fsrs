@@ -1,7 +1,9 @@
 package fsrs
 
-import "fmt"
+import (
+	"errors"
+)
 
 var (
-	ErrInvalidParam = fmt.Errorf("Parameters invalid")
+	ErrInvalidParam = errors.New("Parameters invalid")
 )

@@ -83,7 +83,7 @@ func (s *Scheduler) GetCardRetrievability(card *Card, now time.Time) float64 {
 	return math.Pow(1+s.factor*elapsedDays/stability, s.decay)
 }
 
-func (s *Scheduler) ReviewCard(card *Card, rating Rating, reviewDatetime time.Time, reviewDuration time.Duration) (*Card, *ReviewLog) {
+func (s *Scheduler) ReviewCard(card *Card, rating Rating, reviewDatetime time.Time) *Card {
 	var (
 		daysSinceLastReview float64
 		hasLastReview       bool
@@ -202,18 +202,7 @@ func (s *Scheduler) ReviewCard(card *Card, rating Rating, reviewDatetime time.Ti
 	lastReviewTime := reviewDatetime
 	card.LastReview = &lastReviewTime
 
-	// Create review log
-	reviewLog := &ReviewLog{
-		CardID:         card.ID,
-		Rating:         rating,
-		ReviewDateTime: reviewDatetime,
-	}
-	if int64(reviewDuration) > 0 {
-		durationSeconds := int64(reviewDuration.Seconds())
-		reviewLog.ReviewDuration = &durationSeconds
-	}
-
-	return card, reviewLog
+	return card
 }
 
 func (s *Scheduler) clampDdifficulty(difficulty float64) float64 {
