@@ -116,13 +116,6 @@ func WithEnableFuzzing(enable bool) SchedulerOption {
 	}
 }
 
-// WithDecay sets the decay parameter
-func WithDecay(decay float64) SchedulerOption {
-	return func(s *Scheduler) {
-		s.decay = decay
-	}
-}
-
 // WithFactor sets the factor parameter
 func WithFactor(factor float64) SchedulerOption {
 	return func(s *Scheduler) {

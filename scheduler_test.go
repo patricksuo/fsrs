@@ -9,8 +9,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func mustNewScheduler(options ...SchedulerOption) *Scheduler {
+	s, err := NewScheduler(options...)
+	if err != nil {
+		panic(err)
+	}
+
+	return s
+}
+
 func TestReviewCard(t *testing.T) {
-	scheduler := NewScheduler(WithEnableFuzzing(false))
+	scheduler := mustNewScheduler(WithEnableFuzzing(false))
 
 	ratingList := []Rating{Good,
 		Good,
@@ -65,7 +74,7 @@ func TestRepeatedCorrectReviews(t *testing.T) {
 }
 
 func TestRetrievability(t *testing.T) {
-	scheduler := NewScheduler()
+	scheduler := mustNewScheduler()
 	card := NewEmptyCard(1)
 
 	// Retrievability of New card
@@ -96,7 +105,7 @@ func TestRetrievability(t *testing.T) {
 }
 
 func TestGoodLearningSteps(t *testing.T) {
-	scheduler := NewScheduler()
+	scheduler := mustNewScheduler()
 	createdAt := time.Now().UTC()
 	card := NewEmptyCard(1)
 
@@ -122,7 +131,7 @@ func TestGoodLearningSteps(t *testing.T) {
 }
 
 func TestAgainLearningSteps(t *testing.T) {
-	scheduler := NewScheduler()
+	scheduler := mustNewScheduler()
 	createdAt := time.Now().UTC()
 	card := NewEmptyCard(1)
 
@@ -140,7 +149,7 @@ func TestAgainLearningSteps(t *testing.T) {
 }
 
 func TestHardLearningSteps(t *testing.T) {
-	scheduler := NewScheduler()
+	scheduler := mustNewScheduler()
 	createdAt := time.Now().UTC()
 	card := NewEmptyCard(1)
 
@@ -158,7 +167,7 @@ func TestHardLearningSteps(t *testing.T) {
 }
 
 func TestEasyLearningSteps(t *testing.T) {
-	scheduler := NewScheduler()
+	scheduler := mustNewScheduler()
 	createdAt := time.Now().UTC()
 	card := NewEmptyCard(1)
 
@@ -176,7 +185,7 @@ func TestEasyLearningSteps(t *testing.T) {
 }
 
 func TestReviewState(t *testing.T) {
-	scheduler := NewScheduler(WithEnableFuzzing(false))
+	scheduler := mustNewScheduler(WithEnableFuzzing(false))
 	card := NewEmptyCard(1)
 
 	// First review with Good rating
@@ -209,7 +218,7 @@ func TestReviewState(t *testing.T) {
 }
 
 func TestRelearning(t *testing.T) {
-	scheduler := NewScheduler(WithEnableFuzzing(false))
+	scheduler := mustNewScheduler(WithEnableFuzzing(false))
 
 	card := NewEmptyCard(1)
 
@@ -255,7 +264,7 @@ func TestRelearning(t *testing.T) {
 }
 
 func TestFuzzing(t *testing.T) {
-	scheduler := NewScheduler(WithRandomSource(rand.NewSource(1)))
+	scheduler := mustNewScheduler(WithRandomSource(rand.NewSource(1)))
 
 	card := NewEmptyCard(1)
 	prevDue := card.Due
@@ -272,7 +281,7 @@ func TestFuzzing(t *testing.T) {
 }
 
 func TestNoLearningSteps(t *testing.T) {
-	scheduler := NewScheduler(WithLearningSteps(nil))
+	scheduler := mustNewScheduler(WithLearningSteps(nil))
 	assert.Equal(t, 0, len(scheduler.learningSteps))
 
 	card := NewEmptyCard(1)
@@ -284,7 +293,7 @@ func TestNoLearningSteps(t *testing.T) {
 	assert.GreaterOrEqual(t, intervalDays, 1)
 }
 func TestNoRelearningSteps(t *testing.T) {
-	scheduler := NewScheduler(WithRelearningSteps(nil))
+	scheduler := mustNewScheduler(WithRelearningSteps(nil))
 	assert.Equal(t, 0, len(scheduler.relearningSteps))
 
 	card := NewEmptyCard(1)
@@ -305,13 +314,13 @@ func TestNoRelearningSteps(t *testing.T) {
 
 func TestOneCardMultipleSchedulers(t *testing.T) {
 	// Initialize schedulers with different learning and relearning steps
-	schedulerWithTwoLearningSteps := NewScheduler(WithLearningSteps([]time.Duration{time.Minute, 10 * time.Minute}))
-	schedulerWithOneLearningStep := NewScheduler(WithLearningSteps([]time.Duration{time.Minute}))
-	schedulerWithNoLearningSteps := NewScheduler(WithLearningSteps(nil))
+	schedulerWithTwoLearningSteps := mustNewScheduler(WithLearningSteps([]time.Duration{time.Minute, 10 * time.Minute}))
+	schedulerWithOneLearningStep := mustNewScheduler(WithLearningSteps([]time.Duration{time.Minute}))
+	schedulerWithNoLearningSteps := mustNewScheduler(WithLearningSteps(nil))
 
-	schedulerWithTwoRelearningSteps := NewScheduler(WithRelearningSteps([]time.Duration{time.Minute, 10 * time.Minute}))
-	schedulerWithOneRelearningStep := NewScheduler(WithRelearningSteps([]time.Duration{time.Minute}))
-	schedulerWithNoRelearningSteps := NewScheduler(WithRelearningSteps(nil))
+	schedulerWithTwoRelearningSteps := mustNewScheduler(WithRelearningSteps([]time.Duration{time.Minute, 10 * time.Minute}))
+	schedulerWithOneRelearningStep := mustNewScheduler(WithRelearningSteps([]time.Duration{time.Minute}))
+	schedulerWithNoRelearningSteps := mustNewScheduler(WithRelearningSteps(nil))
 
 	card := NewEmptyCard(1)
 
@@ -354,7 +363,7 @@ func TestOneCardMultipleSchedulers(t *testing.T) {
 
 func TestMaximumInterval(t *testing.T) {
 	maximumInterval := 100
-	scheduler := NewScheduler(WithMaximumInterval(maximumInterval))
+	scheduler := mustNewScheduler(WithMaximumInterval(maximumInterval))
 
 	card := NewEmptyCard(1)
 
@@ -381,7 +390,7 @@ func TestMaximumInterval(t *testing.T) {
 
 func TestLearningCardRateHardOneLearningStep(t *testing.T) {
 	firstLearningStep := 10 * time.Minute
-	schedulerWithOneLearningStep := NewScheduler(WithLearningSteps([]time.Duration{firstLearningStep}))
+	schedulerWithOneLearningStep := mustNewScheduler(WithLearningSteps([]time.Duration{firstLearningStep}))
 
 	card := NewEmptyCard(1)
 
@@ -403,7 +412,7 @@ func TestLearningCardRateHardOneLearningStep(t *testing.T) {
 func TestLearningCardRateHardSecondLearningStep(t *testing.T) {
 	firstLearningStep := time.Minute
 	secondLearningStep := 10 * time.Minute
-	schedulerWithTwoLearningSteps := NewScheduler(WithLearningSteps([]time.Duration{firstLearningStep, secondLearningStep}))
+	schedulerWithTwoLearningSteps := mustNewScheduler(WithLearningSteps([]time.Duration{firstLearningStep, secondLearningStep}))
 
 	card := NewEmptyCard(1)
 
@@ -433,7 +442,7 @@ func TestLearningCardRateHardSecondLearningStep(t *testing.T) {
 
 func TestRelearningCardRateHardOneRelearningStep(t *testing.T) {
 	firstRelearningStep := 10 * time.Minute
-	schedulerWithOneRelearningStep := NewScheduler(WithRelearningSteps([]time.Duration{firstRelearningStep}))
+	schedulerWithOneRelearningStep := mustNewScheduler(WithRelearningSteps([]time.Duration{firstRelearningStep}))
 
 	card := NewEmptyCard(1)
 
@@ -462,7 +471,7 @@ func TestRelearningCardRateHardOneRelearningStep(t *testing.T) {
 func TestRelearningCardRateHardTwoRelearningSteps(t *testing.T) {
 	firstRelearningStep := time.Minute
 	secondRelearningStep := 10 * time.Minute
-	schedulerWithTwoRelearningSteps := NewScheduler(WithRelearningSteps([]time.Duration{firstRelearningStep, secondRelearningStep}))
+	schedulerWithTwoRelearningSteps := mustNewScheduler(WithRelearningSteps([]time.Duration{firstRelearningStep, secondRelearningStep}))
 
 	card := NewEmptyCard(1)
 
