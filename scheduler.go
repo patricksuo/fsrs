@@ -30,6 +30,8 @@ type Scheduler struct {
 	decay float64
 
 	factor float64
+
+	rand *rand.Rand
 }
 
 // SchedulerOption defines the type for configuration functions
@@ -50,6 +52,7 @@ func NewScheduler(options ...SchedulerOption) *Scheduler {
 		enableFuzzing:    true,
 		decay:            decay,
 		factor:           math.Pow(0.9, 1.0/decay) - 1,
+		rand:             nil,
 	}
 
 	// Apply all optional parameters
@@ -62,6 +65,13 @@ func NewScheduler(options ...SchedulerOption) *Scheduler {
 	}
 
 	return s
+}
+
+// WithRandomSource sets fuzzing random source
+func WithRandomSource(source rand.Source) SchedulerOption {
+	return func(s *Scheduler) {
+		s.rand = rand.New(source)
+	}
 }
 
 // WithParameters sets the FSRS model weight parameters
@@ -163,6 +173,8 @@ func (s *Scheduler) ReviewCard(card *Card, rating Rating, reviewDatetime time.Ti
 		hasLastReview       bool
 		nextInterval        time.Duration
 	)
+
+	assertCard(card)
 
 	if card.LastReview != nil {
 		hasLastReview = true
@@ -412,31 +424,33 @@ func (s *Scheduler) getFuzzedInterval(interval time.Duration) time.Duration {
 		return interval
 	}
 
-	// Helper function to compute fuzz bounds
-	getFuzzRange := func(days float64) (int, int) {
-		delta := 1.0
-		for _, fr := range FuzzRanges {
-			delta += fr.Factor * max(0.0, min(days, fr.End)-fr.Start)
-		}
+	minIvl, maxIvl := s.getFuzzRange(intervalDays)
 
-		minIvl := int(math.Round(days - delta))
-		maxIvl := int(math.Round(days + delta))
-
-		minIvl = max(2, minIvl)
-		maxIvl = min(maxIvl, s.maximumInterval)
-		minIvl = min(minIvl, maxIvl)
-
-		return minIvl, maxIvl
+	var r float64
+	if s.rand == nil {
+		r = rand.Float64()
+	} else {
+		r = s.rand.Float64()
 	}
-
-	minIvl, maxIvl := getFuzzRange(intervalDays)
-
-	// Seed the random number generator
-	rand.Seed(time.Now().UnixNano())
-
-	fuzzedDays := float64(minIvl) + rand.Float64()*(float64(maxIvl-minIvl+1))
+	fuzzedDays := float64(minIvl) + r*(float64(maxIvl-minIvl+1))
 	fuzzedDays = math.Round(fuzzedDays)
 	fuzzedDaysClamped := min(fuzzedDays, float64(s.maximumInterval))
 
 	return time.Duration(fuzzedDaysClamped) * 24 * time.Hour
+}
+
+func (s *Scheduler) getFuzzRange(days float64) (int, int) {
+	delta := 1.0
+	for _, fr := range FuzzRanges {
+		delta += fr.Factor * max(0.0, min(days, fr.End)-fr.Start)
+	}
+
+	minIvl := int(math.Round(days - delta))
+	maxIvl := int(math.Round(days + delta))
+
+	minIvl = max(2, minIvl)
+	maxIvl = min(maxIvl, s.maximumInterval)
+	minIvl = min(minIvl, maxIvl)
+
+	return minIvl, maxIvl
 }

@@ -2,6 +2,7 @@ package fsrs
 
 import (
 	"math"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -202,7 +203,6 @@ func TestReviewState(t *testing.T) {
 	rating = Again
 	card = scheduler.ReviewCard(card, rating, card.Due)
 
-	t.Logf("\nWTF %v %v %v\n", prevDue, card.Due, math.Round(card.Due.Sub(prevDue).Minutes()))
 	assert.Equal(t, Relearning, card.State)
 
 	assert.Equal(t, 10, int(math.Round(card.Due.Sub(prevDue).Minutes())))
@@ -252,4 +252,21 @@ func TestRelearning(t *testing.T) {
 	assert.Equal(t, Review, card.State)
 	assert.Equal(t, -1, card.Step)
 	assert.GreaterOrEqual(t, int(math.Round(card.Due.Sub(prevDue).Hours())), 24)
+}
+
+func TestFuzzing(t *testing.T) {
+	scheduler := NewScheduler(WithRandomSource(rand.NewSource(1)))
+
+	card := NewEmptyCard(1)
+	prevDue := card.Due
+	card = scheduler.ReviewCard(card, Good, time.Now().UTC())
+
+	prevDue = card.Due
+	card = scheduler.ReviewCard(card, Good, prevDue)
+
+	prevDue = card.Due
+	card = scheduler.ReviewCard(card, Good, prevDue)
+
+	intervalDays := int(math.Round(card.Due.Sub(prevDue).Hours() / 24))
+	assert.Equal(t, 20, intervalDays)
 }
