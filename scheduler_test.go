@@ -573,3 +573,17 @@ func TestCustomSchedulerArgs(t *testing.T) {
 	assert.Equal(t, -parameters3[20], scheduler3.decay, "scheduler.decay should match the provided values")
 
 }
+
+func TestSchedulerSnapshot(t *testing.T) {
+	scheduler := mustNewScheduler()
+
+	snapshot := scheduler.Snapshot()
+
+	assert.Equal(t, scheduler.parameters, snapshot.Parameters)
+	assert.Equal(t, scheduler.desiredRetention, snapshot.DesiredRetention)
+	assert.Equal(t, scheduler.learningSteps, snapshot.LearningSteps)
+	assert.Equal(t, scheduler.relearningSteps, snapshot.RelearningSteps)
+	assert.Equal(t, scheduler.maximumInterval, snapshot.MaximumInterval)
+	assert.Equal(t, scheduler.enableFuzzing, snapshot.EnableFuzzing)
+
+}

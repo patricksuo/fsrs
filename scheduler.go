@@ -157,6 +157,40 @@ func validateParameters(parameters []float64) error {
 	return nil
 }
 
+type SchedulerSnapshot struct {
+	// Parameters are the model weights of the FSRS scheduler.
+	Parameters []float64
+
+	// DesiredRetention is the desired retention rate of cards scheduled with the scheduler.
+	DesiredRetention float64
+
+	// LearningSteps are small time intervals that schedule cards in the Learning state.
+	LearningSteps []time.Duration
+
+	// RelearningSteps are small time intervals that schedule cards in the Relearning state.
+	RelearningSteps []time.Duration
+
+	// MaximumInterval is the maximum number of days a Review-state card can be scheduled into the future.
+	MaximumInterval int
+
+	// EnableFuzzing determines whether to apply a small amount of random 'fuzz' to calculated intervals.
+	EnableFuzzing bool
+}
+
+// Snapshot dump a scheduler snapshot
+func (s *Scheduler) Snapshot() *SchedulerSnapshot {
+	ss := &SchedulerSnapshot{}
+
+	ss.Parameters = append(ss.Parameters, s.parameters...)
+	ss.DesiredRetention = s.desiredRetention
+	ss.LearningSteps = append(ss.LearningSteps, s.learningSteps...)
+	ss.RelearningSteps = append(ss.RelearningSteps, s.relearningSteps...)
+	ss.MaximumInterval = s.maximumInterval
+	ss.EnableFuzzing = s.enableFuzzing
+
+	return ss
+}
+
 func (s *Scheduler) GetCardRetrievability(card *Card, now time.Time) float64 {
 	if card.LastReview == nil {
 		return 0
