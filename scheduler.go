@@ -116,13 +116,6 @@ func WithEnableFuzzing(enable bool) SchedulerOption {
 	}
 }
 
-// WithFactor sets the factor parameter
-func WithFactor(factor float64) SchedulerOption {
-	return func(s *Scheduler) {
-		s.factor = factor
-	}
-}
-
 // validateParameters checks if the parameters are within valid bounds.
 func validateParameters(parameters []float64) error {
 	if len(parameters) != len(LowerBoundsParameters) {
