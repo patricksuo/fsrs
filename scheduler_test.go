@@ -519,3 +519,57 @@ func TestRelearningCardRateHardTwoRelearningSteps(t *testing.T) {
 	assert.Equal(t, Review, card.State, "Expected card state to be Review after Easy rating")
 	assert.Equal(t, -1, card.Step, "Expected card step to be -1 after Easy rating")
 }
+
+func TestCustomSchedulerArgs(t *testing.T) {
+	// First scheduler with specific configuration
+	scheduler := mustNewScheduler(
+		WithDesiredRetention(0.9),
+		WithMaximumInterval(36500),
+		WithEnableFuzzing(false),
+	)
+
+	card := NewEmptyCard(1)
+	now := time.Date(2022, time.November, 29, 12, 30, 0, 0, time.UTC)
+
+	ratings := []Rating{Good, Good, Good, Good, Good, Good, Again, Again, Good, Good, Good, Good, Good}
+	var ivlHistory []int
+
+	for _, rating := range ratings {
+		card = scheduler.ReviewCard(card, rating, now)
+		ivl := int(math.Round(card.Due.Sub(*card.LastReview).Hours() / 24))
+		ivlHistory = append(ivlHistory, ivl)
+		now = card.Due
+	}
+
+	expectedIvlHistory := []int{0, 4, 14, 45, 135, 372, 0, 0, 2, 5, 10, 20, 40}
+	assert.Equal(t, expectedIvlHistory, ivlHistory, "Interval history should match expected values")
+
+	// Second scheduler with custom parameters
+	parameters2 := []float64{
+		0.1456, 0.4186, 1.1104, 4.1315, 5.2417, 1.3098, 0.8975, 0.0010,
+		1.5674, 0.0567, 0.9661, 2.0275, 0.1592, 0.2446, 1.5071, 0.2272,
+		2.8755, 1.234, 0.56789, 0.1437, 0.2,
+	}
+	desiredRetention2 := 0.85
+	maximumInterval2 := 3650
+	scheduler2 := mustNewScheduler(
+		WithParameters(parameters2),
+		WithDesiredRetention(desiredRetention2),
+		WithMaximumInterval(maximumInterval2),
+	)
+
+	assert.Equal(t, parameters2, scheduler2.parameters, "Parameters should match the provided values")
+	assert.Equal(t, desiredRetention2, scheduler2.desiredRetention, "Desired retention should match the provided value")
+	assert.Equal(t, maximumInterval2, scheduler2.maximumInterval, "Maximum interval should match the provided value")
+
+	parameters3 := []float64{
+		0.1456, 0.4186, 1.1104, 4.1315, 5.2417, 1.3098, 0.8975, 0.0010,
+		1.5674, 0.0567, 0.9661, 2.0275, 0.1592, 0.2446, 1.5071, 0.2272,
+		2.8755, 1.234, 0.56789, 0.1437, 0.6,
+	}
+
+	scheduler3 := mustNewScheduler(WithParameters(parameters3))
+
+	assert.Equal(t, -parameters3[20], scheduler3.decay, "scheduler.decay should match the provided values")
+
+}

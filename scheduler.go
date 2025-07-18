@@ -35,7 +35,7 @@ type Scheduler struct {
 }
 
 // SchedulerOption defines the type for configuration functions
-type SchedulerOption func(*Scheduler)
+type SchedulerOption func(*Scheduler) error
 
 // NewScheduler creates a new Scheduler instance with default values and applies optional parameters
 func NewScheduler(options ...SchedulerOption) (*Scheduler, error) {
@@ -57,11 +57,9 @@ func NewScheduler(options ...SchedulerOption) (*Scheduler, error) {
 
 	// Apply all optional parameters
 	for _, option := range options {
-		option(s)
-	}
-
-	if err := validateParameters(s.parameters); err != nil {
-		return nil, err
+		if err := option(s); err != nil {
+			return nil, err
+		}
 	}
 
 	return s, nil
@@ -69,50 +67,70 @@ func NewScheduler(options ...SchedulerOption) (*Scheduler, error) {
 
 // WithRandomSource sets fuzzing random source
 func WithRandomSource(source rand.Source) SchedulerOption {
-	return func(s *Scheduler) {
+	return func(s *Scheduler) error {
 		s.rand = rand.New(source)
+		return nil
 	}
 }
 
 // WithParameters sets the FSRS model weight parameters
 func WithParameters(params []float64) SchedulerOption {
-	return func(s *Scheduler) {
+	return func(s *Scheduler) error {
+		err := validateParameters(params)
+		if err != nil {
+			return err
+		}
+
 		s.parameters = params
+		s.decay = -params[20]
+		s.factor = math.Pow(0.9, 1.0/s.decay) - 1
+
+		return nil
 	}
 }
 
 // WithDesiredRetention sets the desired retention rate
 func WithDesiredRetention(retention float64) SchedulerOption {
-	return func(s *Scheduler) {
+	return func(s *Scheduler) error {
 		s.desiredRetention = retention
+
+		return nil
 	}
 }
 
 // WithLearningSteps sets the time intervals for cards in the Learning state
 func WithLearningSteps(steps []time.Duration) SchedulerOption {
-	return func(s *Scheduler) {
+	return func(s *Scheduler) error {
 		s.learningSteps = steps
+
+		return nil
 	}
 }
 
 // WithRelearningSteps sets the time intervals for cards in the Relearning state
 func WithRelearningSteps(steps []time.Duration) SchedulerOption {
-	return func(s *Scheduler) {
+	return func(s *Scheduler) error {
 		s.relearningSteps = steps
+
+		return nil
 	}
 }
 
 // WithMaximumInterval sets the maximum number of days for Review-state card scheduling
 func WithMaximumInterval(days int) SchedulerOption {
-	return func(s *Scheduler) {
+	return func(s *Scheduler) error {
 		s.maximumInterval = days
+
+		return nil
 	}
 }
 
 // WithEnableFuzzing determines whether to apply random fuzz to calculated intervals
 func WithEnableFuzzing(enable bool) SchedulerOption {
-	return func(s *Scheduler) {
+	return func(s *Scheduler) error {
 		s.enableFuzzing = enable
+
+		return nil
 	}
 }
 
