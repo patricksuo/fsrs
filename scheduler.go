@@ -38,7 +38,7 @@ type Scheduler struct {
 type SchedulerOption func(*Scheduler)
 
 // NewScheduler creates a new Scheduler instance with default values and applies optional parameters
-func NewScheduler(options ...SchedulerOption) *Scheduler {
+func NewScheduler(options ...SchedulerOption) (*Scheduler, error) {
 	// Set reasonable default values
 	var params = DefaultParameters
 	var decay = -params[20]
@@ -61,10 +61,10 @@ func NewScheduler(options ...SchedulerOption) *Scheduler {
 	}
 
 	if err := validateParameters(s.parameters); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return s
+	return s, nil
 }
 
 // WithRandomSource sets fuzzing random source
